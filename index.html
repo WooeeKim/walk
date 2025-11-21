@@ -116,9 +116,181 @@
       let currentSegmentCount = 0;
       const segmentConfigs = [];
 
-      const MIN_SEGMENTS = 2;
-      const MAX_SEGMENTS = 12;
       const SEGMENT_LENGTH = 1.0;
+
+      const SEGMENT_BLUEPRINTS = [
+        {
+          name: "pelvis",
+          width: 1.3,
+          height: 0.9,
+          parentIndex: null,
+          anchorIndex: null,
+          role: "core",
+          rotationAmplitude: 0.12,
+          rotationSpeed: 1.6,
+          wobbleStrength: 0.04,
+          wobbleSpeed: 1.2,
+          lateralStrength: 0.03,
+          baseYOffset: -0.4
+        },
+        {
+          name: "torso",
+          width: 1.0,
+          height: 1.5,
+          parentIndex: 0,
+          anchorIndex: 2,
+          role: "core",
+          rotationAmplitude: 0.18,
+          rotationSpeed: 1.8,
+          wobbleStrength: 0.05,
+          wobbleSpeed: 1.0,
+          lateralStrength: 0.02,
+          baseYOffset: 0.2
+        },
+        {
+          name: "head",
+          width: 0.65,
+          height: 0.65,
+          parentIndex: 1,
+          anchorIndex: 2,
+          role: "head",
+          rotationAmplitude: 0.2,
+          rotationSpeed: 1.4,
+          wobbleStrength: 0.05,
+          wobbleSpeed: 1.3,
+          lateralStrength: 0.02,
+          baseYOffset: 0.4
+        },
+        {
+          name: "leftThigh",
+          width: 0.35,
+          height: 1.4,
+          parentIndex: 0,
+          anchorIndex: 0,
+          role: "legLeft",
+          rotationAmplitude: 0.95,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.03,
+          wobbleSpeed: 1.1,
+          lateralStrength: 0.05,
+          baseYOffset: -0.1
+        },
+        {
+          name: "rightThigh",
+          width: 0.35,
+          height: 1.4,
+          parentIndex: 0,
+          anchorIndex: 1,
+          role: "legRight",
+          rotationAmplitude: 0.95,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.03,
+          wobbleSpeed: 1.1,
+          lateralStrength: 0.05,
+          baseYOffset: -0.1
+        },
+        {
+          name: "leftShin",
+          width: 0.3,
+          height: 1.15,
+          parentIndex: 3,
+          anchorIndex: 2,
+          role: "legLeft",
+          rotationAmplitude: 0.7,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.02,
+          wobbleSpeed: 1.0,
+          lateralStrength: 0.04,
+          baseYOffset: -0.05
+        },
+        {
+          name: "rightShin",
+          width: 0.3,
+          height: 1.15,
+          parentIndex: 4,
+          anchorIndex: 2,
+          role: "legRight",
+          rotationAmplitude: 0.7,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.02,
+          wobbleSpeed: 1.0,
+          lateralStrength: 0.04,
+          baseYOffset: -0.05
+        },
+        {
+          name: "leftArm",
+          width: 0.3,
+          height: 1.0,
+          parentIndex: 1,
+          anchorIndex: 3,
+          role: "armLeft",
+          rotationAmplitude: 0.55,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.03,
+          wobbleSpeed: 1.2,
+          lateralStrength: 0.04,
+          baseYOffset: 0.25
+        },
+        {
+          name: "rightArm",
+          width: 0.3,
+          height: 1.0,
+          parentIndex: 1,
+          anchorIndex: 4,
+          role: "armRight",
+          rotationAmplitude: 0.55,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.03,
+          wobbleSpeed: 1.2,
+          lateralStrength: 0.04,
+          baseYOffset: 0.25
+        },
+        {
+          name: "leftForearm",
+          width: 0.25,
+          height: 0.85,
+          parentIndex: 7,
+          anchorIndex: 2,
+          role: "armLeft",
+          rotationAmplitude: 0.45,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.02,
+          wobbleSpeed: 1.2,
+          lateralStrength: 0.03,
+          baseYOffset: 0
+        },
+        {
+          name: "rightForearm",
+          width: 0.25,
+          height: 0.85,
+          parentIndex: 8,
+          anchorIndex: 2,
+          role: "armRight",
+          rotationAmplitude: 0.45,
+          rotationSpeed: 1.0,
+          wobbleStrength: 0.02,
+          wobbleSpeed: 1.2,
+          lateralStrength: 0.03,
+          baseYOffset: 0
+        },
+        {
+          name: "upperTorso",
+          width: 0.85,
+          height: 1.05,
+          parentIndex: 1,
+          anchorIndex: 2,
+          role: "core",
+          rotationAmplitude: 0.15,
+          rotationSpeed: 1.6,
+          wobbleStrength: 0.04,
+          wobbleSpeed: 1.1,
+          lateralStrength: 0.02,
+          baseYOffset: 0.5
+        }
+      ];
+
+      const MIN_SEGMENTS = 1;
+      const MAX_SEGMENTS = SEGMENT_BLUEPRINTS.length;
 
       function clearWalker() {
         walkerRoot.children.slice().forEach(child => {
@@ -135,18 +307,21 @@
         if (segmentConfigs.length > count) {
           segmentConfigs.length = count;
         }
-        while (segmentConfigs.length < count) {
-          segmentConfigs.push({
-            width: randomInRange(0.6, 1.4),
-            height: randomInRange(0.6, 1.5),
-            rotationSpeed: randomInRange(1.5, 3.5),
-            rotationAmplitude: randomInRange(0.35, 0.85),
-            wobbleSpeed: randomInRange(0.8, 1.6),
-            wobbleStrength: randomInRange(0.05, 0.25),
-            lateralStrength: randomInRange(0.03, 0.12),
-            phase: Math.random() * Math.PI * 2,
-            baseYOffset: (Math.random() - 0.5) * 0.15
-          });
+        for (let i = 0; i < count; i++) {
+          if (segmentConfigs[i]) continue;
+          const blueprint = SEGMENT_BLUEPRINTS[i] || SEGMENT_BLUEPRINTS[SEGMENT_BLUEPRINTS.length - 1];
+          const config = {
+            ...blueprint,
+            width: blueprint.width * randomInRange(0.95, 1.05),
+            height: blueprint.height * randomInRange(0.92, 1.08),
+            rotationSpeed: blueprint.rotationSpeed + randomInRange(-0.2, 0.2),
+            rotationAmplitude: blueprint.rotationAmplitude + randomInRange(-0.05, 0.05),
+            wobbleSpeed: blueprint.wobbleSpeed + randomInRange(-0.2, 0.2),
+            wobbleStrength: Math.max(0, blueprint.wobbleStrength + randomInRange(-0.01, 0.01)),
+            lateralStrength: Math.max(0, blueprint.lateralStrength + randomInRange(-0.01, 0.01)),
+            phase: Math.random() * Math.PI * 2
+          };
+          segmentConfigs[i] = config;
         }
       }
 
@@ -154,11 +329,16 @@
         const anchors = [
           new THREE.Group(),
           new THREE.Group(),
+          new THREE.Group(),
+          new THREE.Group(),
           new THREE.Group()
         ];
+        const width = widthScale * SEGMENT_LENGTH;
         anchors[0].position.set(0, 0, 0);
-        anchors[1].position.set(widthScale * SEGMENT_LENGTH, 0, 0);
-        anchors[2].position.set(widthScale * SEGMENT_LENGTH * 0.5, heightScale, 0);
+        anchors[1].position.set(width, 0, 0);
+        anchors[2].position.set(width * 0.5, heightScale, 0);
+        anchors[3].position.set(width * 0.2, heightScale * 0.75, 0);
+        anchors[4].position.set(width * 0.8, heightScale * 0.75, 0);
         return anchors;
       }
 
@@ -170,29 +350,32 @@
           const config = segmentConfigs[i];
           const joint = new THREE.Group();
           joint.position.set(0, 0, 0);
+
           const mesh = new THREE.Mesh(triangleGeometry, triangleMaterial);
           const { width, height } = config;
           mesh.scale.set(width * SEGMENT_LENGTH, height, 1.0);
           mesh.position.set(0, 0, 0);
 
           joint.add(mesh);
+
           const anchors = createAnchors(width, height);
           anchors.forEach(anchor => joint.add(anchor));
           joint.userData.anchors = anchors;
           joint.userData.config = config;
+          joint.userData.role = config.role;
           joint.userData.offset = {
-            x: (Math.random() - 0.5) * 0.05,
-            y: config.baseYOffset
+            x: (config.baseOffsetX || 0) + (Math.random() - 0.5) * 0.02,
+            y: config.baseYOffset || 0
           };
 
-          if (i === 0) {
+          const parentIndex = config.parentIndex;
+          if (parentIndex === null || parentIndex === undefined) {
             walkerRoot.add(joint);
           } else {
-            const parentIndex = Math.floor(Math.random() * i);
             const parentJoint = joints[parentIndex];
-            const anchorIndex = Math.floor(Math.random() * 3);
+            const anchorIndex = config.anchorIndex ?? 2;
             const parentAnchor =
-              parentJoint.userData.anchors[anchorIndex] || parentJoint;
+              parentJoint?.userData.anchors[anchorIndex] || parentJoint || walkerRoot;
             parentAnchor.add(joint);
           }
 
@@ -238,28 +421,61 @@
         const t = clock.getElapsedTime();
 
         // 워커 전체 위치 및 롤링
-        const travelSpeed = 1.5;
-        const loopWidth = 14;
-        const strideSpeed = 2.8;
-        const rollSpeed = 1.2;
+        const travelSpeed = 1.2;
+        const loopWidth = 12;
+        const strideSpeed = 2.4;
         const stridePhase = t * strideSpeed;
         walkerRoot.position.x = ((t * travelSpeed) % loopWidth) - loopWidth / 2;
-        walkerRoot.position.y = -1.45 + Math.sin(stridePhase * 0.5) * 0.35;
-        walkerRoot.rotation.z =
-          Math.sin(stridePhase) * 0.35 + stridePhase * 0.05;
-        walkerRoot.rotation.x = Math.cos(rollSpeed * t) * 0.1;
-        walkerRoot.rotation.y = Math.sin(rollSpeed * 0.7 * t) * 0.18;
+        walkerRoot.position.y = -1.5 + Math.sin(stridePhase) * 0.28;
+        walkerRoot.rotation.z = Math.sin(stridePhase) * 0.08;
+        walkerRoot.rotation.x = Math.sin(stridePhase * 0.5) * 0.05;
 
-        joints.forEach((joint, i) => {
+        joints.forEach(joint => {
           const config = joint.userData.config;
           if (!config) return;
-          const swingPhase = stridePhase * config.rotationSpeed + config.phase;
-          const rattlePhase = t * config.wobbleSpeed + config.phase;
-          const swing = Math.sin(swingPhase) * config.rotationAmplitude;
-          joint.rotation.z = swing;
-          const wobbleY = Math.sin(rattlePhase) * config.wobbleStrength;
-          const wobbleX = Math.cos(rattlePhase) * config.lateralStrength;
-          joint.position.y = (joint.userData.offset?.y || 0) + wobbleY;
+
+          let rotation = 0;
+          switch (config.role) {
+            case "legLeft":
+              rotation = Math.sin(stridePhase) * config.rotationAmplitude;
+              break;
+            case "legRight":
+              rotation = Math.sin(stridePhase + Math.PI) * config.rotationAmplitude;
+              break;
+            case "armLeft":
+              rotation = Math.sin(stridePhase + Math.PI) * config.rotationAmplitude;
+              break;
+            case "armRight":
+              rotation = Math.sin(stridePhase) * config.rotationAmplitude;
+              break;
+            case "head":
+              rotation =
+                Math.sin(t * config.rotationSpeed + config.phase) *
+                  config.rotationAmplitude * 0.6 +
+                Math.sin(stridePhase) * 0.05;
+              break;
+            default:
+              rotation =
+                Math.sin(t * config.rotationSpeed + config.phase) *
+                config.rotationAmplitude;
+              break;
+          }
+
+          joint.rotation.z = rotation;
+
+          const wobblePhase = t * config.wobbleSpeed + config.phase;
+          const wobbleY = Math.sin(wobblePhase) * config.wobbleStrength;
+          const wobbleX = Math.cos(wobblePhase) * config.lateralStrength;
+
+          let gaitLift = 0;
+          if (config.role === "legLeft") {
+            gaitLift = Math.max(0, Math.sin(stridePhase + Math.PI / 2));
+          } else if (config.role === "legRight") {
+            gaitLift = Math.max(0, Math.sin(stridePhase + Math.PI * 1.5));
+          }
+
+          joint.position.y =
+            (joint.userData.offset?.y || 0) + wobbleY + gaitLift * 0.15;
           joint.position.x = (joint.userData.offset?.x || 0) + wobbleX;
         });
 
