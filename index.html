@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Triangle Walker - Button Version</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #f4f4f2;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        position: fixed;
+        inset: 0;
+      }
+      .ui {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 12px;
+        z-index: 10;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      button {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: none;
+        background: #111111;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .info {
+        font-size: 14px;
+        color: #111111;
+        align-self: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ui">
+      <button id="addJoint">관절 하나 추가하기</button>
+      <button id="removeJoint">관절 하나 빼기</button>
+      <span class="info" id="jointInfo"></span>
+    </div>
+
+    <script type="module">
+      import * as THREE from "https://unpkg.com/three@0.164.0/build/three.module.js";
+
+      // === 기본 세팅 ===
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf4f4f2);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const camera = new THREE.OrthographicCamera();
+      scene.add(camera);
+
+      function updateCamera() {
+        const aspect = window.innerWidth / window.innerHeight;
+        const viewSize = 6;
+        camera.left   = -viewSize * aspect;
+        camera.right  =  viewSize * aspect;
+        camera.top    =  viewSize;
+        camera.bottom = -viewSize;
+        camera.near   = 0.1;
+        camera.far    = 100;
+        camera.position.set(0, 0, 10);
+        camera.lookAt(0, 0, 0);
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+      updateCamera();
+      window.addEventListener("resize", updateCamera);
+
+      // === 삼각형 지오메트리 & 머티리얼 ===
+      function createTriangleGeometry() {
+        const geometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+          0,   0, 0,   // 왼쪽 아래(피벗)
+          1.0, 0, 0,   // 오른쪽 아래
+          0.5, 1.0, 0  // 위
+        ]);
+        geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(vertices, 3)
+        );
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+
+      const triangleGeometry = createTriangleGeometry();
+      const triangleMaterial = new THREE.MeshBasicMaterial({
+        color: 0x111111,
+        side: THREE.DoubleSide
+      });
+
+      // === 워커(관절 체인) ===
+      const walkerRoot = new THREE.Group();
+      scene.add(walkerRoot);
+
+      let joints = [];
+      let currentSegmentCount = 0;
+
+      const MIN_SEGMENTS = 2;
+      const MAX_SEGMENTS = 12;
+      const SEGMENT_LENGTH = 1.0;
+
+      function clearWalker() {
+        walkerRoot.children.slice().forEach(child => {
+          walkerRoot.remove(child);
+        });
+        joints = [];
+      }
+
+      function buildWalker(segmentCount) {
+        clearWalker();
+
+        let parent = walkerRoot;
+
+        for (let i = 0; i < segmentCount; i++) {
+          const joint = new THREE.Group();
+          if (i > 0) joint.position.x = SEGMENT_LENGTH;
+
+          const mesh = new THREE.Mesh(triangleGeometry, triangleMaterial);
+          mesh.scale.set(SEGMENT_LENGTH, 1.0, 1.0);
+          mesh.position.set(0, 0, 0);
+
+          joint.add(mesh);
+          parent.add(joint);
+
+          joints.push(joint);
+          parent = joint;
+        }
+
+        currentSegmentCount = segmentCount;
+        updateUI();
+      }
+
+      // === UI ===
+      const addButton = document.getElementById("addJoint");
+      const removeButton = document.getElementById("removeJoint");
+      const jointInfo = document.getElementById("jointInfo");
+
+      function updateUI() {
+        jointInfo.textContent = `관절 개수: ${currentSegmentCount}`;
+        addButton.disabled = currentSegmentCount >= MAX_SEGMENTS;
+        removeButton.disabled = currentSegmentCount <= MIN_SEGMENTS;
+      }
+
+      addButton.addEventListener("click", () => {
+        if (currentSegmentCount < MAX_SEGMENTS) {
+          buildWalker(currentSegmentCount + 1);
+        }
+      });
+
+      removeButton.addEventListener("click", () => {
+        if (currentSegmentCount > MIN_SEGMENTS) {
+          buildWalker(currentSegmentCount - 1);
+        }
+      });
+
+      // 초기 상태: 힘겹게 걷는 느낌 (관절 적게)
+      buildWalker(MIN_SEGMENTS);
+
+      // === 애니메이션 루프 ===
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const t = clock.getElapsedTime();
+
+        // 워커 전체 위치 (왼 -> 오른쪽으로 계속 이동)
+        const walkSpeed = 0.8;
+        const loopWidth = 10;
+        walkerRoot.position.x = ((t * walkSpeed) % loopWidth) - loopWidth / 2;
+        walkerRoot.position.y = -1.5;
+
+        // 각 관절 회전
+        const baseAmplitude = 0.6;
+        const baseSpeed = 2.5;
+
+        joints.forEach((joint, i) => {
+          const phase = i * 0.4;
+          const smoothFactor = 0.3 + (i / Math.max(joints.length - 1, 1)) * 0.7;
+          joint.rotation.z =
+            Math.sin(t * baseSpeed + phase) * baseAmplitude * smoothFactor;
+        });
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
