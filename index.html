@@ -2,271 +2,157 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <title>Triangle Walker - Button Version</title>
+    <title>Triangular Evolution Walk</title>
     <style>
-      html, body {
+      :root {
+        color-scheme: light;
+      }
+      html,
+      body {
         margin: 0;
         padding: 0;
         height: 100%;
-        background: #f4f4f2;
-        overflow: hidden;
+        background: #e8e6e3;
+        font-family: "Pretendard Variable", "Noto Sans KR", system-ui, -apple-system,
+          BlinkMacSystemFont, sans-serif;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       canvas {
+        width: 100vw;
+        height: 100vh;
         display: block;
-        position: fixed;
-        inset: 0;
       }
-      .ui {
+      .caption {
         position: fixed;
-        top: 20px;
+        bottom: 28px;
         left: 50%;
         transform: translateX(-50%);
-        display: flex;
-        gap: 12px;
-        z-index: 10;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      }
-      button {
-        padding: 8px 14px;
-        border-radius: 999px;
-        border: none;
-        background: #111111;
-        color: white;
-        font-size: 14px;
-        cursor: pointer;
-      }
-      button:disabled {
-        opacity: 0.4;
-        cursor: default;
-      }
-      .info {
-        font-size: 14px;
-        color: #111111;
-        align-self: center;
+        letter-spacing: 0.04em;
+        font-size: 0.85rem;
+        color: #111;
+        text-transform: uppercase;
       }
     </style>
   </head>
   <body>
-    <div class="ui">
-      <button id="addJoint">관절 하나 추가하기</button>
-      <button id="removeJoint">관절 하나 빼기</button>
-      <span class="info" id="jointInfo"></span>
-    </div>
+    <canvas id="evolution"></canvas>
+    <div class="caption">Primitive → Emerging → Natural → Fluent</div>
 
-    <script type="module">
-      import * as THREE from "https://unpkg.com/three@0.164.0/build/three.module.js";
+    <script>
+      const canvas = document.getElementById("evolution");
+      const ctx = canvas.getContext("2d");
 
-      // === 기본 세팅 ===
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf4f4f2);
-
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
-
-      const camera = new THREE.OrthographicCamera();
-      scene.add(camera);
-
-      function updateCamera() {
-        const aspect = window.innerWidth / window.innerHeight;
-        const viewSize = 6;
-        camera.left   = -viewSize * aspect;
-        camera.right  =  viewSize * aspect;
-        camera.top    =  viewSize;
-        camera.bottom = -viewSize;
-        camera.near   = 0.1;
-        camera.far    = 100;
-        camera.position.set(0, 0, 10);
-        camera.lookAt(0, 0, 0);
-        camera.updateProjectionMatrix();
-
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      }
-      updateCamera();
-      window.addEventListener("resize", updateCamera);
-
-      // === 삼각형 지오메트리 & 머티리얼 ===
-      function createTriangleGeometry() {
-        const geometry = new THREE.BufferGeometry();
-        const vertices = new Float32Array([
-          0,   0, 0,   // 왼쪽 아래(피벗)
-          1.0, 0, 0,   // 오른쪽 아래
-          0.5, 1.0, 0  // 위
-        ]);
-        geometry.setAttribute(
-          "position",
-          new THREE.BufferAttribute(vertices, 3)
-        );
-        geometry.computeVertexNormals();
-        return geometry;
-      }
-
-      const triangleGeometry = createTriangleGeometry();
-      const triangleMaterial = new THREE.MeshBasicMaterial({
-        color: 0x111111,
-        side: THREE.DoubleSide
-      });
-
-      // === 워커(관절 체인) ===
-      const walkerRoot = new THREE.Group();
-      scene.add(walkerRoot);
-
-      let joints = [];
-      let currentSegmentCount = 0;
-      const segmentConfigs = [];
-
-      const MIN_SEGMENTS = 2;
-      const MAX_SEGMENTS = 12;
-      const SEGMENT_LENGTH = 1.0;
-
-      function clearWalker() {
-        walkerRoot.children.slice().forEach(child => {
-          walkerRoot.remove(child);
-        });
-        joints = [];
-      }
-
-      function randomInRange(min, max) {
-        return min + Math.random() * (max - min);
-      }
-
-      function ensureSegmentConfigs(count) {
-        if (segmentConfigs.length > count) {
-          segmentConfigs.length = count;
+      const STAGES = [
+        {
+          scale: 0.9,
+          triangles: [
+            { x: 0, y: 0, width: 1.1, height: 1.3, rotation: 0 }
+          ]
+        },
+        {
+          scale: 0.78,
+          triangles: [
+            { x: 0.05, y: -0.15, width: 1.05, height: 1.9, rotation: -0.18 },
+            { x: -0.4, y: 0.75, width: 0.45, height: 1.35, rotation: -0.55 },
+            { x: 0.35, y: 0.75, width: 0.45, height: 1.05, rotation: 0.35 },
+            { x: 0, y: -1.5, width: 0.55, height: 0.75, rotation: -0.25 }
+          ]
+        },
+        {
+          scale: 0.92,
+          triangles: [
+            { x: 0, y: -0.05, width: 1.1, height: 1.1, rotation: 0.04 },
+            { x: 0.05, y: -0.95, width: 0.95, height: 1.45, rotation: 0 },
+            { x: 0.1, y: -2.25, width: 0.55, height: 0.75, rotation: 0.1 },
+            { x: -0.35, y: 0.55, width: 0.42, height: 1.2, rotation: -0.28 },
+            { x: -0.4, y: 1.45, width: 0.32, height: 1, rotation: 0.25 },
+            { x: 0.4, y: 0.45, width: 0.42, height: 1.3, rotation: 0.35 },
+            { x: 0.32, y: 1.45, width: 0.3, height: 1.05, rotation: -0.08 },
+            { x: -0.75, y: -0.8, width: 0.28, height: 1.15, rotation: -0.55 },
+            { x: 0.75, y: -0.7, width: 0.28, height: 1.25, rotation: 0.35 }
+          ]
+        },
+        {
+          scale: 1.05,
+          triangles: [
+            { x: 0, y: -0.05, width: 1.25, height: 1.35, rotation: 0.02 },
+            { x: 0.05, y: -1.2, width: 1.05, height: 1.6, rotation: -0.02 },
+            { x: 0.12, y: -2.7, width: 0.65, height: 0.85, rotation: 0.08 },
+            { x: -0.5, y: 0.35, width: 0.48, height: 1.35, rotation: -0.3 },
+            { x: -0.55, y: 1.55, width: 0.35, height: 1.15, rotation: 0.32 },
+            { x: 0.48, y: 0.3, width: 0.48, height: 1.4, rotation: 0.38 },
+            { x: 0.42, y: 1.6, width: 0.35, height: 1.2, rotation: -0.05 },
+            { x: -0.9, y: -1.05, width: 0.32, height: 1.35, rotation: -0.65 },
+            { x: -0.95, y: 0, width: 0.26, height: 1.05, rotation: -0.18 },
+            { x: 0.95, y: -0.95, width: 0.32, height: 1.35, rotation: 0.35 },
+            { x: 0.95, y: 0.05, width: 0.26, height: 1.05, rotation: 0.12 }
+          ]
         }
-        while (segmentConfigs.length < count) {
-          segmentConfigs.push({
-            width: randomInRange(0.6, 1.4),
-            height: randomInRange(0.6, 1.5),
-            rotationSpeed: randomInRange(1.5, 3.5),
-            rotationAmplitude: randomInRange(0.35, 0.85),
-            wobbleSpeed: randomInRange(0.8, 1.6),
-            wobbleStrength: randomInRange(0.05, 0.25),
-            lateralStrength: randomInRange(0.03, 0.12),
-            phase: Math.random() * Math.PI * 2,
-            baseYOffset: (Math.random() - 0.5) * 0.15
-          });
-        }
+      ];
+
+      function resize() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(window.innerWidth * dpr);
+        canvas.height = Math.round(window.innerHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        draw();
       }
 
-      function createAnchors(widthScale, heightScale) {
-        const anchors = [
-          new THREE.Group(),
-          new THREE.Group(),
-          new THREE.Group()
+      function drawTriangle(cx, cy, width, height, rotation = 0) {
+        const half = width / 2;
+        const points = [
+          { x: -half, y: 0 },
+          { x: half, y: 0 },
+          { x: 0, y: -height }
         ];
-        anchors[0].position.set(0, 0, 0);
-        anchors[1].position.set(widthScale * SEGMENT_LENGTH, 0, 0);
-        anchors[2].position.set(widthScale * SEGMENT_LENGTH * 0.5, heightScale, 0);
-        return anchors;
-      }
 
-      function buildWalker(segmentCount) {
-        clearWalker();
-        ensureSegmentConfigs(segmentCount);
-
-        for (let i = 0; i < segmentCount; i++) {
-          const config = segmentConfigs[i];
-          const joint = new THREE.Group();
-          joint.position.set(0, 0, 0);
-          const mesh = new THREE.Mesh(triangleGeometry, triangleMaterial);
-          const { width, height } = config;
-          mesh.scale.set(width * SEGMENT_LENGTH, height, 1.0);
-          mesh.position.set(0, 0, 0);
-
-          joint.add(mesh);
-          const anchors = createAnchors(width, height);
-          anchors.forEach(anchor => joint.add(anchor));
-          joint.userData.anchors = anchors;
-          joint.userData.config = config;
-          joint.userData.offset = {
-            x: (Math.random() - 0.5) * 0.05,
-            y: config.baseYOffset
-          };
-
-          if (i === 0) {
-            walkerRoot.add(joint);
-          } else {
-            const parentIndex = Math.floor(Math.random() * i);
-            const parentJoint = joints[parentIndex];
-            const anchorIndex = Math.floor(Math.random() * 3);
-            const parentAnchor =
-              parentJoint.userData.anchors[anchorIndex] || parentJoint;
-            parentAnchor.add(joint);
-          }
-
-          joints.push(joint);
-        }
-
-        currentSegmentCount = segmentCount;
-        updateUI();
-      }
-
-      // === UI ===
-      const addButton = document.getElementById("addJoint");
-      const removeButton = document.getElementById("removeJoint");
-      const jointInfo = document.getElementById("jointInfo");
-
-      function updateUI() {
-        jointInfo.textContent = `관절 개수: ${currentSegmentCount}`;
-        addButton.disabled = currentSegmentCount >= MAX_SEGMENTS;
-        removeButton.disabled = currentSegmentCount <= MIN_SEGMENTS;
-      }
-
-      addButton.addEventListener("click", () => {
-        if (currentSegmentCount < MAX_SEGMENTS) {
-          buildWalker(currentSegmentCount + 1);
-        }
-      });
-
-      removeButton.addEventListener("click", () => {
-        if (currentSegmentCount > MIN_SEGMENTS) {
-          buildWalker(currentSegmentCount - 1);
-        }
-      });
-
-      // 초기 상태: 힘겹게 걷는 느낌 (관절 적게)
-      buildWalker(MIN_SEGMENTS);
-
-      // === 애니메이션 루프 ===
-      const clock = new THREE.Clock();
-
-      function animate() {
-        requestAnimationFrame(animate);
-
-        const t = clock.getElapsedTime();
-
-        // 워커 전체 위치 및 롤링
-        const travelSpeed = 1.5;
-        const loopWidth = 14;
-        const strideSpeed = 2.8;
-        const rollSpeed = 1.2;
-        const stridePhase = t * strideSpeed;
-        walkerRoot.position.x = ((t * travelSpeed) % loopWidth) - loopWidth / 2;
-        walkerRoot.position.y = -1.45 + Math.sin(stridePhase * 0.5) * 0.35;
-        walkerRoot.rotation.z =
-          Math.sin(stridePhase) * 0.35 + stridePhase * 0.05;
-        walkerRoot.rotation.x = Math.cos(rollSpeed * t) * 0.1;
-        walkerRoot.rotation.y = Math.sin(rollSpeed * 0.7 * t) * 0.18;
-
-        joints.forEach((joint, i) => {
-          const config = joint.userData.config;
-          if (!config) return;
-          const swingPhase = stridePhase * config.rotationSpeed + config.phase;
-          const rattlePhase = t * config.wobbleSpeed + config.phase;
-          const swing = Math.sin(swingPhase) * config.rotationAmplitude;
-          joint.rotation.z = swing;
-          const wobbleY = Math.sin(rattlePhase) * config.wobbleStrength;
-          const wobbleX = Math.cos(rattlePhase) * config.lateralStrength;
-          joint.position.y = (joint.userData.offset?.y || 0) + wobbleY;
-          joint.position.x = (joint.userData.offset?.x || 0) + wobbleX;
+        ctx.beginPath();
+        points.forEach((point, index) => {
+          const rotatedX = point.x * Math.cos(rotation) - point.y * Math.sin(rotation);
+          const rotatedY = point.x * Math.sin(rotation) + point.y * Math.cos(rotation);
+          const x = cx + rotatedX;
+          const y = cy + rotatedY;
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         });
-
-        renderer.render(scene, camera);
+        ctx.closePath();
+        ctx.fill();
       }
 
-      animate();
+      function draw() {
+        ctx.fillStyle = "#e8e6e3";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const baseLine = canvas.height * 0.7;
+        const stageSpacing = canvas.width / (STAGES.length + 1);
+        const baseScale = Math.min(stageSpacing * 0.5, canvas.height * 0.4);
+
+        STAGES.forEach((stage, index) => {
+          const stageX = stageSpacing * (index + 1);
+          const scale = baseScale * stage.scale;
+
+          const groundWidth = scale * 1.2;
+          ctx.fillStyle = "#111111";
+          ctx.fillRect(stageX - groundWidth / 2, baseLine + 6, groundWidth, 3.5);
+
+          stage.triangles.forEach(tri => {
+            drawTriangle(
+              stageX + tri.x * scale,
+              baseLine + tri.y * scale,
+              tri.width * scale,
+              tri.height * scale,
+              tri.rotation
+            );
+          });
+        });
+      }
+
+      window.addEventListener("resize", resize);
+      resize();
     </script>
   </body>
 </html>
