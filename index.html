@@ -26,25 +26,57 @@
         height: 100vh;
         display: block;
       }
-      .caption {
+      .controls {
         position: fixed;
-        bottom: 28px;
+        top: 28px;
         left: 50%;
         transform: translateX(-50%);
-        letter-spacing: 0.04em;
-        font-size: 0.85rem;
+        display: inline-flex;
+        gap: 12px;
+        align-items: center;
+        background: rgba(232, 230, 227, 0.8);
+        border-radius: 999px;
+        padding: 10px 16px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+      }
+      button {
+        border: none;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+        font-weight: 600;
+        background: #111;
+        color: #fff;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      .stage-label {
+        font-size: 14px;
+        font-weight: 600;
         color: #111;
-        text-transform: uppercase;
+        min-width: 180px;
+        text-align: center;
       }
     </style>
   </head>
   <body>
     <canvas id="evolution"></canvas>
-    <div class="caption">Primitive → Emerging → Natural → Fluent</div>
+    <div class="controls">
+      <button id="removeStage">관절 빼기</button>
+      <span class="stage-label" id="stageLabel"></span>
+      <button id="addStage">관절 추가</button>
+    </div>
 
     <script>
       const canvas = document.getElementById("evolution");
       const ctx = canvas.getContext("2d");
+      const stageLabel = document.getElementById("stageLabel");
+      const addButton = document.getElementById("addStage");
+      const removeButton = document.getElementById("removeStage");
 
       const STAGES = [
         {
@@ -98,6 +130,8 @@
         }
       ];
 
+      const MIN_STAGE = 0;
+      const MAX_STAGE = STAGES.length - 1;
       let currentStage = 0;
 
       function resize() {
@@ -134,7 +168,7 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         const stage = STAGES[currentStage];
-        const baseLine = canvas.height * 0.68;
+        const baseLine = canvas.height * 0.6;
         const baseScale = Math.min(canvas.width * 0.35, canvas.height * 0.42);
         const scale = baseScale * stage.scale;
         const stageX = canvas.width / 2;
@@ -153,25 +187,26 @@
           );
         });
 
-        ctx.fillStyle = "#111111";
-        ctx.font = "600 18px 'Pretendard Variable', 'Noto Sans KR', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(stage.label, canvas.width / 2, canvas.height * 0.18);
-        ctx.font = "400 14px 'Pretendard Variable', 'Noto Sans KR', sans-serif";
-        ctx.fillText("클릭해서 다음 단계 보기", canvas.width / 2, canvas.height * 0.25);
+        updateControls();
+      }
+
+      function updateControls() {
+        stageLabel.textContent = STAGES[currentStage].label;
+        removeButton.disabled = currentStage <= MIN_STAGE;
+        addButton.disabled = currentStage >= MAX_STAGE;
+      }
+
+      function changeStage(direction) {
+        const nextStage = currentStage + direction;
+        if (nextStage < MIN_STAGE || nextStage > MAX_STAGE) return;
+        currentStage = nextStage;
+        draw();
       }
 
       window.addEventListener("resize", resize);
-      canvas.addEventListener("click", () => {
-        currentStage = (currentStage + 1) % STAGES.length;
-        draw();
-      });
-      canvas.addEventListener("touchend", (e) => {
-        e.preventDefault();
-        currentStage = (currentStage + 1) % STAGES.length;
-        draw();
-      }, { passive: false });
+      addButton.addEventListener("click", () => changeStage(1));
+      removeButton.addEventListener("click", () => changeStage(-1));
+
       resize();
     </script>
   </body>
