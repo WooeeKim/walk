@@ -48,12 +48,14 @@
 
       const STAGES = [
         {
+          label: "Stage 1 · Primitive",
           scale: 0.9,
           triangles: [
             { x: 0, y: 0, width: 1.1, height: 1.3, rotation: 0 }
           ]
         },
         {
+          label: "Stage 2 · Emerging",
           scale: 0.78,
           triangles: [
             { x: 0.05, y: -0.15, width: 1.05, height: 1.9, rotation: -0.18 },
@@ -63,6 +65,7 @@
           ]
         },
         {
+          label: "Stage 3 · Natural",
           scale: 0.92,
           triangles: [
             { x: 0, y: -0.05, width: 1.1, height: 1.1, rotation: 0.04 },
@@ -77,6 +80,7 @@
           ]
         },
         {
+          label: "Stage 4 · Fluent",
           scale: 1.05,
           triangles: [
             { x: 0, y: -0.05, width: 1.25, height: 1.35, rotation: 0.02 },
@@ -93,6 +97,8 @@
           ]
         }
       ];
+
+      let currentStage = 0;
 
       function resize() {
         const dpr = window.devicePixelRatio || 1;
@@ -127,31 +133,45 @@
         ctx.fillStyle = "#e8e6e3";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const baseLine = canvas.height * 0.7;
-        const stageSpacing = canvas.width / (STAGES.length + 1);
-        const baseScale = Math.min(stageSpacing * 0.5, canvas.height * 0.4);
+        const stage = STAGES[currentStage];
+        const baseLine = canvas.height * 0.68;
+        const baseScale = Math.min(canvas.width * 0.35, canvas.height * 0.42);
+        const scale = baseScale * stage.scale;
+        const stageX = canvas.width / 2;
 
-        STAGES.forEach((stage, index) => {
-          const stageX = stageSpacing * (index + 1);
-          const scale = baseScale * stage.scale;
+        const groundWidth = scale * 1.4;
+        ctx.fillStyle = "#111111";
+        ctx.fillRect(stageX - groundWidth / 2, baseLine + 7, groundWidth, 3.5);
 
-          const groundWidth = scale * 1.2;
-          ctx.fillStyle = "#111111";
-          ctx.fillRect(stageX - groundWidth / 2, baseLine + 6, groundWidth, 3.5);
-
-          stage.triangles.forEach(tri => {
-            drawTriangle(
-              stageX + tri.x * scale,
-              baseLine + tri.y * scale,
-              tri.width * scale,
-              tri.height * scale,
-              tri.rotation
-            );
-          });
+        stage.triangles.forEach(tri => {
+          drawTriangle(
+            stageX + tri.x * scale,
+            baseLine + tri.y * scale,
+            tri.width * scale,
+            tri.height * scale,
+            tri.rotation
+          );
         });
+
+        ctx.fillStyle = "#111111";
+        ctx.font = "600 18px 'Pretendard Variable', 'Noto Sans KR', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(stage.label, canvas.width / 2, canvas.height * 0.18);
+        ctx.font = "400 14px 'Pretendard Variable', 'Noto Sans KR', sans-serif";
+        ctx.fillText("클릭해서 다음 단계 보기", canvas.width / 2, canvas.height * 0.25);
       }
 
       window.addEventListener("resize", resize);
+      canvas.addEventListener("click", () => {
+        currentStage = (currentStage + 1) % STAGES.length;
+        draw();
+      });
+      canvas.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        currentStage = (currentStage + 1) % STAGES.length;
+        draw();
+      }, { passive: false });
       resize();
     </script>
   </body>
